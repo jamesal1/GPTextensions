@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "Colored Text Extension",
+    "version": "1.0",
+    "description": "A Chrome extension to render colored text in chat windows.",
+    "host_permissions": [
+      "https://chat.openai.com/*"
+    ],
+    "content_scripts": [
+      {
+        "matches": ["*://chat.openai.com/*"],
+        "js": ["contentScript.js"],
+        "run_at": "document_end"
+      }
+    ]
+  }
