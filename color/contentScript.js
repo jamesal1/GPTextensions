@@ -1,41 +1,53 @@
 // contentScript.js
 
 function handleTextNodes(node) {
-    const textNodes = Array.from(node.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
-    textNodes.forEach(textNode => {
-        const parent = textNode.parentNode;
-        const fullTextContent = textNode.textContent;
-
-        const colorRegex = /\[(red|blue|green)\](.*?)\[\/\1\]/g;
-        let match = colorRegex.exec(fullTextContent);
-        let lastIndex = 0;
-        if (match) {
-            while (match) {
-                const preText = document.createTextNode(fullTextContent.substring(lastIndex, match.index));
-                parent.insertBefore(preText, textNode);
-                const colorSpan = document.createElement("span");
-                colorSpan.style.color = match[1];
-                colorSpan.innerText = match[2];
-                parent.insertBefore(colorSpan, textNode);
-                lastIndex = colorRegex.lastIndex;
-                match = colorRegex.exec(fullTextContent);
-            }
-            const postText = document.createTextNode(fullTextContent.substring(lastIndex));
-            parent.insertBefore(postText, textNode);
-            parent.removeChild(textNode);
+    if (node.nodeType === Node.TEXT_NODE) {
+      const parent = node.parentNode;
+      const fullTextContent = node.textContent;
+  
+      const colorRegex = /\[(\w+)](.*?)\[\/\1]/g;
+      let match = colorRegex.exec(fullTextContent);
+      let lastIndex = 0;
+      if (match) {
+        while (match) {
+          const preText = document.createTextNode(fullTextContent.substring(lastIndex, match.index));
+          parent.insertBefore(preText, node);
+  
+          const colorValue = match[1];
+          const isValidColor = CSS.supports('color', colorValue);
+  
+          if (isValidColor) {
+            const colorSpan = document.createElement("span");
+            colorSpan.style.color = colorValue;
+            colorSpan.innerText = match[2];
+            parent.insertBefore(colorSpan, node);
+          }
+  
+          lastIndex = colorRegex.lastIndex;
+          match = colorRegex.exec(fullTextContent);
         }
-    });
-}
-const observer = new MutationObserver(mutationsList => {
-  for (let mutation of mutationsList) {
-    const target = mutation.target;
-    console.log("Mutation on target:", target);
+        const postText = document.createTextNode(fullTextContent.substring(lastIndex));
+        parent.insertBefore(postText, node);
+        parent.removeChild(node);
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      node.childNodes.forEach(childNode => {
+        handleTextNodes(childNode); // Recursively process child nodes
+      });
+    }
   }
-});
+  
+  
 
-const options = {
-  childList: true,
-  subtree: true
-};
-
-observer.observe(document.body, options);
+const observer = new MutationObserver(mutationsList => {
+    for (let mutation of mutationsList) {
+      if (mutation.target.nodeType === Node.ELEMENT_NODE && mutation.target.tagName === "BUTTON") {
+        let currentElement = mutation.target;
+        handleTextNodes(document.body);
+      }
+    }
+  });
+  
+  // Start observing the document with the configured parameters
+  observer.observe(document.body, { childList: true, subtree: true });
+  
